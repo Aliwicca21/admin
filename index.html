@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>إنشاء أدمن - محمي</title>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    // ✅ إعدادات Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyBGFMZtSytIPzF4XYLyA34DpF5q_k-UPL8",
+      authDomain: "fir-dba4c.firebaseapp.com",
+      projectId: "fir-dba4c",
+      storageBucket: "fir-dba4c.firebasestorage.app",
+      messagingSenderId: "160255207915",
+      appId: "1:160255207915:web:ce8e69d43f62daf476d1ae",
+      measurementId: "G-GYPNMR85G2"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // 🟢 دالة التحقق من الباسورد الأمني
+    window.checkSecurityPassword = function () {
+      const securityPass = document.getElementById("securityPassword").value.trim();
+      if (securityPass === "Ali2845294@") {
+        document.getElementById("loginBox").style.display = "none";
+        document.getElementById("adminBox").style.display = "block";
+      } else {
+        document.getElementById("loginStatus").innerText = "❌ الباسورد الأمني غير صحيح!";
+      }
+    }
+
+    // 🟢 دالة إضافة أدمن
+    window.addAdmin = async function() {
+      const username = document.getElementById("username").value.trim();
+      const name = document.getElementById("name").value.trim();
+      const password = document.getElementById("password").value.trim();
+      const role = document.getElementById("role").value;
+
+      if (!username || !name || !password) {
+        document.getElementById("status").innerText = "❌ رجاءً املأ كل الحقول";
+        return;
+      }
+
+      try {
+        await setDoc(doc(db, "admins", username), {
+          name: name,
+          password: password,
+          role: role
+        });
+        document.getElementById("status").innerText = "✅ تم إضافة الأدمن بنجاح!";
+      } catch (error) {
+        document.getElementById("status").innerText = "❌ خطأ: " + error.message;
+      }
+    }
+  </script>
+</head>
+<body style="font-family: Arial; direction: rtl; margin: 30px;">
+
+  <!-- 🛡️ خطوة تسجيل الدخول الأمني -->
+  <div id="loginBox">
+    <h2>🔒 أدخل الباسورد الأمني</h2>
+    <input type="password" id="securityPassword" placeholder="Security Password">
+    <button onclick="checkSecurityPassword()">✔ دخول</button>
+    <p id="loginStatus" style="color: red; font-weight: bold;"></p>
+  </div>
+
+  <!-- 📌 صفحة إنشاء الأدمن (تظهر فقط لو الباسورد صحيح) -->
+  <div id="adminBox" style="display: none;">
+    <h2>📌 إنشاء حساب أدمن جديد</h2>
+
+    <label>👤 اسم الدخول (username):</label><br>
+    <input type="text" id="username"><br><br>
+
+    <label>📛 الاسم:</label><br>
+    <input type="text" id="name"><br><br>
+
+    <label>🔑 كلمة المرور:</label><br>
+    <input type="password" id="password"><br><br>
+
+    <label>🎭 الدور (role):</label><br>
+    <select id="role">
+      <option value="admin">Admin</option>
+      <option value="superadmin">Super Admin</option>
+      <option value="editor">Editor</option>
+    </select><br><br>
+
+    <button onclick="addAdmin()">➕ إضافة الأدمن</button>
+
+    <p id="status" style="color: green; font-weight: bold;"></p>
+  </div>
+
+</body>
+</html>
