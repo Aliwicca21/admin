@@ -1,96 +1,114 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <title>إنشاء أدمن - محمي</title>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+<meta charset="utf-8" />
+<title>إنشاء أدمن جديد</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  body{font-family:Tahoma,Arial;background:#f6f7fb;margin:0;padding:20px}
+  .card{max-width:520px;margin:20px auto;background:#fff;border-radius:14px;padding:22px;box-shadow:0 10px 25px rgba(0,0,0,.08)}
+  h2{margin-top:0}
+  label{display:block;margin:10px 0 6px}
+  input,select{width:100%;padding:10px;border:1px solid #ddd;border-radius:10px}
+  button{margin-top:14px;padding:12px;border:0;border-radius:10px;background:#0070ba;color:#fff;cursor:pointer}
+  .note{font-size:13px;color:#666}
+  .ok{color:#1e7e34;margin-top:10px}
+  .err{color:#c0392b;margin-top:10px}
+</style>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+  import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+  import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
-    // ✅ إعدادات Firebase
-    const firebaseConfig = {
-      apiKey: "AIzaSyBGFMZtSytIPzF4XYLyA34DpF5q_k-UPL8",
-      authDomain: "fir-dba4c.firebaseapp.com",
-      projectId: "fir-dba4c",
-      storageBucket: "fir-dba4c.firebasestorage.app",
-      messagingSenderId: "160255207915",
-      appId: "1:160255207915:web:ce8e69d43f62daf476d1ae",
-      measurementId: "G-GYPNMR85G2"
-    };
+  // ===== Firebase Config (خاصة بمشروعك) =====
+  const firebaseConfig = {
+    apiKey: "AIzaSyBGFMZtSytIPzF4XYLyA34DpF5q_k-UPL8",
+    authDomain: "fir-dba4c.firebaseapp.com",
+    projectId: "fir-dba4c",
+    storageBucket: "fir-dba4c.firebasestorage.app",
+    messagingSenderId: "160255207915",
+    appId: "1:160255207915:web:ce8e69d43f62daf476d1ae",
+    measurementId: "G-GYPNMR85G2"
+  };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db   = getFirestore(app);
 
-    // 🟢 دالة التحقق من الباسورد الأمني
-    window.checkSecurityPassword = function () {
-      const securityPass = document.getElementById("securityPassword").value.trim();
-      if (securityPass === "Ali2845294@") {
-        document.getElementById("loginBox").style.display = "none";
-        document.getElementById("adminBox").style.display = "block";
-      } else {
-        document.getElementById("loginStatus").innerText = "❌ الباسورد الأمني غير صحيح!";
-      }
+  // تسجيل دخول مجهول تلقائيًا
+  signInAnonymously(auth).catch(console.error);
+
+  // دالة هاش لكلمة المرور
+  async function sha256(text){
+    const enc = new TextEncoder().encode(text);
+    const buf = await crypto.subtle.digest("SHA-256", enc);
+    return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("");
+  }
+
+  async function createAdmin(){
+    const username   = document.getElementById("username").value.trim();
+    const name       = document.getElementById("name").value.trim();
+    const password   = document.getElementById("password").value;
+    const role       = document.getElementById("role").value;
+    const secureKey  = document.getElementById("secureKey").value;
+
+    const msg = document.getElementById("msg");
+    msg.textContent = ""; msg.className = "";
+
+    if(!username || !name || !password || !secureKey){
+      msg.textContent = "رجاءً املأ كل الحقول."; msg.className="err"; return;
     }
 
-    // 🟢 دالة إضافة أدمن
-    window.addAdmin = async function() {
-      const username = document.getElementById("username").value.trim();
-      const name = document.getElementById("name").value.trim();
-      const password = document.getElementById("password").value.trim();
-      const role = document.getElementById("role").value;
+    try{
+      const passwordHash = await sha256(password);
 
-      if (!username || !name || !password) {
-        document.getElementById("status").innerText = "❌ رجاءً املأ كل الحقول";
-        return;
-      }
+      // بنكتب doc اسمه = username
+      await setDoc(doc(db,"admins",username),{
+        username,
+        name,
+        role,                 // "admin" | "superadmin"
+        passwordHash,         // مش بنخزّن الباسورد نفسه
+        secureKey,            // 🔴 مؤقتًا عشان القاعدة تسمح بالإنشاء
+        createdAt: serverTimestamp()
+      });
 
-      try {
-        await setDoc(doc(db, "admins", username), {
-          name: name,
-          password: password,
-          role: role
-        });
-        document.getElementById("status").innerText = "✅ تم إضافة الأدمن بنجاح!";
-      } catch (error) {
-        document.getElementById("status").innerText = "❌ خطأ: " + error.message;
-      }
+      msg.textContent = "تم إنشاء الأدمن بنجاح ✅ (لا تنسَ لاحقًا إغلاق الإنشاء من القواعد).";
+      msg.className = "ok";
+    }catch(e){
+      console.error(e);
+      msg.textContent = "خطأ: " + (e?.message || e); 
+      msg.className = "err";
     }
-  </script>
+  }
+
+  window.createAdmin = createAdmin;
+</script>
 </head>
-<body style="font-family: Arial; direction: rtl; margin: 30px;">
+<body>
+  <div class="card">
+    <h2>إنشاء حساب أدمِن جديد 📌</h2>
 
-  <!-- 🛡️ خطوة تسجيل الدخول الأمني -->
-  <div id="loginBox">
-    <h2>🔒 أدخل الباسورد الأمني</h2>
-    <input type="password" id="securityPassword" placeholder="Security Password">
-    <button onclick="checkSecurityPassword()">✔ دخول</button>
-    <p id="loginStatus" style="color: red; font-weight: bold;"></p>
-  </div>
+    <label>اسم الدخول (username):</label>
+    <input id="username" placeholder="مثال: ali2020" />
 
-  <!-- 📌 صفحة إنشاء الأدمن (تظهر فقط لو الباسورد صحيح) -->
-  <div id="adminBox" style="display: none;">
-    <h2>📌 إنشاء حساب أدمن جديد</h2>
+    <label>الاسم:</label>
+    <input id="name" placeholder="مثال: Ali Elsayed" />
 
-    <label>👤 اسم الدخول (username):</label><br>
-    <input type="text" id="username"><br><br>
+    <label>كلمة المرور:</label>
+    <input id="password" type="password" placeholder="••••••••" />
 
-    <label>📛 الاسم:</label><br>
-    <input type="text" id="name"><br><br>
-
-    <label>🔑 كلمة المرور:</label><br>
-    <input type="password" id="password"><br><br>
-
-    <label>🎭 الدور (role):</label><br>
+    <label>الدور (role):</label>
     <select id="role">
-      <option value="admin">Admin</option>
       <option value="superadmin">Super Admin</option>
-      <option value="editor">Editor</option>
-    </select><br><br>
+      <option value="admin">Admin</option>
+    </select>
 
-    <button onclick="addAdmin()">➕ إضافة الأدمن</button>
+    <label>الباسورد الأمني (مطلوب للإنشاء):</label>
+    <input id="secureKey" type="password" placeholder="Ali2845294@" />
 
-    <p id="status" style="color: green; font-weight: bold;"></p>
+    <button onclick="createAdmin()">إضافة الأدمن</button>
+    <div class="note">هذه الصفحة للإنشاء الأول فقط. بعد إنشاء أول أدمن، يُفضّل إغلاق الإنشاء من القواعد.</div>
+    <div id="msg"></div>
   </div>
-
 </body>
 </html>
